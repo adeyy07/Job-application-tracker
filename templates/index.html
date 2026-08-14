@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Job Application Tracker</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+<body>
+
+<div class="container">
+
+    <!-- HEADER -->
+    <div class="header">
+        <h1>Job Application Tracker</h1>
+
+        <p>
+            Track your applications, interviews, offers,
+            and progress in one place.
+        </p>
+    </div>
+
+
+    <!-- DASHBOARD -->
+    <div class="dashboard">
+
+        <div class="stat-card">
+            <h3>{{ total }}</h3>
+            <p>Total Applications</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>{{ interviews }}</h3>
+            <p>Interviews</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>{{ offers }}</h3>
+            <p>Offers</p>
+        </div>
+
+        <div class="stat-card">
+            <h3>{{ rejections }}</h3>
+            <p>Rejections</p>
+        </div>
+
+    </div>
+
+
+    <!-- ADD APPLICATION -->
+    <div class="section-card">
+
+        <h2>Add Application</h2>
+
+        <form
+            action="/add"
+            method="POST"
+            class="job-form"
+        >
+
+            <input
+                type="text"
+                name="company"
+                placeholder="Company"
+                required
+            >
+
+            <input
+                type="text"
+                name="position"
+                placeholder="Position"
+                required
+            >
+
+            <input
+                type="date"
+                name="date_applied"
+                required
+            >
+
+            <select name="status" required>
+
+                <option value="Applied">
+                    Applied
+                </option>
+
+                <option value="Interview">
+                    Interview
+                </option>
+
+                <option value="Offer">
+                    Offer
+                </option>
+
+                <option value="Rejected">
+                    Rejected
+                </option>
+
+            </select>
+
+            <input
+                type="text"
+                name="salary"
+                placeholder="Salary / Pay Range"
+            >
+
+            <input
+                type="text"
+                name="notes"
+                placeholder="Notes"
+            >
+
+            <button
+                class="primary-btn full-width"
+                type="submit"
+            >
+                Add Application
+            </button>
+
+        </form>
+
+    </div>
+
+
+    <!-- SEARCH AND FILTER -->
+    <div class="section-card">
+
+        <h2>Search Applications</h2>
+
+        <form
+            action="/"
+            method="GET"
+            class="search-bar"
+        >
+
+            <input
+                type="text"
+                name="search"
+                placeholder="Search company or position..."
+                value="{{ search }}"
+            >
+
+            <select name="status">
+
+                <option value="">
+                    All Statuses
+                </option>
+
+                <option
+                    value="Applied"
+                    {% if selected_status == "Applied" %}
+                    selected
+                    {% endif %}
+                >
+                    Applied
+                </option>
+
+                <option
+                    value="Interview"
+                    {% if selected_status == "Interview" %}
+                    selected
+                    {% endif %}
+                >
+                    Interview
+                </option>
+
+                <option
+                    value="Offer"
+                    {% if selected_status == "Offer" %}
+                    selected
+                    {% endif %}
+                >
+                    Offer
+                </option>
+
+                <option
+                    value="Rejected"
+                    {% if selected_status == "Rejected" %}
+                    selected
+                    {% endif %}
+                >
+                    Rejected
+                </option>
+
+            </select>
+
+            <button
+                class="primary-btn"
+                type="submit"
+            >
+                Search
+            </button>
+
+            <a
+                href="/"
+                class="clear-btn"
+            >
+                Clear Filters
+            </a>
+
+        </form>
+
+    </div>
+
+
+    <!-- APPLICATION LIST -->
+    <h2>Applications</h2>
+
+    {% if applications %}
+
+        {% for application in applications %}
+
+        <div class="job-card">
+
+            <h3>
+                {{ application[1] }} — {{ application[2] }}
+            </h3>
+
+            <div class="job-meta">
+                Applied {{ application[3] }}
+            </div>
+
+
+            <p>
+                <strong>Status:</strong>
+
+                <span class="status-badge">
+                    {{ application[4] }}
+                </span>
+            </p>
+
+
+            <p>
+                <strong>Salary:</strong>
+
+                {{ application[5] or "Not provided" }}
+            </p>
+
+
+            <p>
+                <strong>Notes:</strong>
+
+                {{ application[6] or "None" }}
+            </p>
+
+
+            <!-- ACTION BUTTONS -->
+            <div class="actions">
+
+
+                <!-- UPDATE STATUS -->
+                <form
+                    action="/update/{{ application[0] }}"
+                    method="POST"
+                >
+
+                    <select name="status">
+
+                        <option
+                            value="Applied"
+                            {% if application[4] == "Applied" %}
+                            selected
+                            {% endif %}
+                        >
+                            Applied
+                        </option>
+
+
+                        <option
+                            value="Interview"
+                            {% if application[4] == "Interview" %}
+                            selected
+                            {% endif %}
+                        >
+                            Interview
+                        </option>
+
+
+                        <option
+                            value="Offer"
+                            {% if application[4] == "Offer" %}
+                            selected
+                            {% endif %}
+                        >
+                            Offer
+                        </option>
+
+
+                        <option
+                            value="Rejected"
+                            {% if application[4] == "Rejected" %}
+                            selected
+                            {% endif %}
+                        >
+                            Rejected
+                        </option>
+
+                    </select>
+
+
+                    <button
+                        class="update-btn"
+                        type="submit"
+                    >
+                        Update Status
+                    </button>
+
+                </form>
+
+
+                <!-- DELETE APPLICATION -->
+                <form
+                    action="/delete/{{ application[0] }}"
+                    method="POST"
+                    onsubmit="return confirm('Are you sure you want to delete this application?');"
+                >
+
+                    <button
+                        class="delete-btn"
+                        type="submit"
+                    >
+                        Delete
+                    </button>
+
+                </form>
+
+            </div>
+
+        </div>
+
+        {% endfor %}
+
+
+    {% else %}
+
+        <div class="section-card empty-state">
+
+            <h3>No applications found</h3>
+
+            <p>
+                Try changing your search or add a new job application.
+            </p>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+</body>
+</html>

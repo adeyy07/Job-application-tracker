@@ -1,43 +1,95 @@
+from flask import Flask, render_template, request, redirect, url_for
 from database import (
     create_table,
     add_application,
     get_applications,
-    search_applications,
-    filter_by_status,
     update_status,
     delete_application,
     get_statistics
 )
 
-
-def display_applications(applications):
-    if not applications:
-        print("\nNo applications found.")
-        return
-
-    print("\nJOB APPLICATIONS")
-    print("-" * 70)
-
-    for application in applications:
-        print(f"ID: {application[0]}")
-        print(f"Company: {application[1]}")
-        print(f"Position: {application[2]}")
-        print(f"Date Applied: {application[3]}")
-        print(f"Status: {application[4]}")
-        print(f"Salary: {application[5]}")
-        print(f"Notes: {application[6]}")
-        print("-" * 70)
+app = Flask(__name__)
 
 
-def add_new_application():
-    print("\nADD NEW JOB APPLICATION")
+@app.route("/")
+def home():
+    create_table()
 
-    company = input("Company: ")
-    position = input("Position: ")
-    date_applied = input("Date applied (YYYY-MM-DD): ")
-    status = input("Status (Applied / Interview / Offer / Rejected): ")
-    salary = input("Salary or salary range: ")
-    notes = input("Notes: ")
+    search = request.args.get("search", "").strip()
+    selected_status = request.args.get("status", "").strip()
+
+    applications = get_applications()
+
+    # Search by company or position
+    if search:
+        applications = [
+            application
+            for application in applications
+            if search.lower() in application[1].lower()
+            or search.lower() in application[2].lower()
+        ]
+
+    # Filter by status
+    if selected_status:
+        applications = [
+            application
+            for application in applications
+            if application[4].lower() == selected_status.lower()
+        ]
+
+    # Dashboard statistics
+    total, status_counts = get_statistics()
+
+    interviews = 0
+    offers = 0
+    rejections = 0
+
+    for status_name, count in status_counts:
+        status_name = status_name.lower()
+
+        if status_name == "interview":
+            interviews = count
+
+        elif status_name == "offer":
+            offers = count
+
+        elif status_name == "rejected":
+            rejections = count
+
+    return render_template(
+        "index.html",
+        applications=applications,
+        total=total,
+        interviews=interviews,
+        offers=offers,
+        rejections=rejections,
+        search=search,
+        selected_status=selected_status
+    )
+
+
+@app.route("/add", methods=["POST"])
+def add():
+    company = request.form["company"].strip()
+    position = request.form["position"].strip()
+    date_applied = request.form["date_applied"].strip()
+    status = request.form["status"].strip()
+    salary = request.form["salary"].strip()
+    notes = request.form["notes"].strip()
+
+    # Basic validation
+    if not company or not position or not date_applied:
+        return redirect(url_for("home"))
+
+    valid_statuses = [
+        "Applied",
+        "Interview",
+        "Offer",
+        "Rejected"
+    ]
+
+    if status not in valid_statuses:
+        status = "Applied"
 
     add_application(
         company,
@@ -48,116 +100,41 @@ def add_new_application():
         notes
     )
 
-    print("\nApplication saved successfully.")
+    return redirect(url_for("home"))
 
 
-def view_all_applications():
-    display_applications(get_applications())
+@app.route("/update/<int:application_id>", methods=["POST"])
+def update(application_id):
+    new_status = request.form["status"].strip()
+
+    valid_statuses = [
+        "Applied",
+        "Interview",
+        "Offer",
+        "Rejected"
+    ]
+
+    if new_status in valid_statuses:
+        update_status(
+            application_id,
+            new_status
+        )
+
+    return redirect(url_for("home"))
 
 
-def search_jobs():
-    keyword = input("\nEnter company or position to search: ")
-    results = search_applications(keyword)
-    display_applications(results)
+@app.route("/delete/<int:application_id>", methods=["POST"])
+def delete(application_id):
+    delete_application(application_id)
 
-
-def filter_jobs():
-    status = input(
-        "\nEnter status (Applied / Interview / Offer / Rejected): "
-    )
-
-    results = filter_by_status(status)
-    display_applications(results)
-
-
-def update_job_status():
-    application_id = input("\nEnter application ID: ")
-    new_status = input(
-        "Enter new status (Applied / Interview / Offer / Rejected): "
-    )
-
-    if not application_id.isdigit():
-        print("Invalid ID.")
-        return
-
-    updated = update_status(int(application_id), new_status)
-
-    if updated:
-        print("Application status updated successfully.")
-    else:
-        print("Application not found.")
-
-
-def remove_application():
-    application_id = input("\nEnter application ID to delete: ")
-
-    if not application_id.isdigit():
-        print("Invalid ID.")
-        return
-
-    deleted = delete_application(int(application_id))
-
-    if deleted:
-        print("Application deleted successfully.")
-    else:
-        print("Application not found.")
-
-
-def show_statistics():
-    total, status_counts = get_statistics()
-
-    print("\nAPPLICATION STATISTICS")
-    print("-" * 30)
-    print(f"Total applications: {total}")
-
-    for status, count in status_counts:
-        print(f"{status}: {count}")
-
-
-def main():
-    create_table()
-
-    while True:
-        print("\nJOB APPLICATION TRACKER")
-        print("1. Add application")
-        print("2. View applications")
-        print("3. Search applications")
-        print("4. Filter by status")
-        print("5. Update application status")
-        print("6. Delete application")
-        print("7. View statistics")
-        print("8. Exit")
-
-        choice = input("\nChoose an option: ")
-
-        if choice == "1":
-            add_new_application()
-
-        elif choice == "2":
-            view_all_applications()
-
-        elif choice == "3":
-            search_jobs()
-
-        elif choice == "4":
-            filter_jobs()
-
-        elif choice == "5":
-            update_job_status()
-
-        elif choice == "6":
-            remove_application()
-
-        elif choice == "7":
-            show_statistics()
-
-        elif choice == "8":
-            print("Goodbye.")
-            break
-
-        else:
-            print("Invalid option. Please try again.")
+    return redirect(url_for("home"))
 
 
 if __name__ == "__main__":
-    main()
+    create_table()
+
+    app.run(
+        host="0.0.0.0",
+        port=5000,
+        debug=True
+    )

@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Apply with Adey</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+</head>
+
+<body>
+
+<div class="login-page">
+
+    <div class="login-card">
+
+        <h1>Apply with Adey</h1>
+
+        <p>
+            Private Job Application Dashboard
+        </p>
+
+        <form method="POST">
+
+            <input
+                type="password"
+                name="password"
+                placeholder="Enter password"
+                required
+            >
+
+            <button
+                class="primary-btn"
+                type="submit"
+            >
+                Sign In
+            </button>
+
+        </form>
+
+        {% if error %}
+
+        <p class="login-error">
+            {{ error }}
+        </p>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+</body>
+</html>

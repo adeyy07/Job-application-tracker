@@ -1,4 +1,15 @@
-from flask import Flask, render_template, request, redirect, url_for
+import os
+from functools import wraps
+
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session
+)
+
 from database import (
     create_table,
     add_application,
@@ -10,8 +21,51 @@ from database import (
 
 app = Flask(__name__)
 
+app.secret_key = os.environ.get(
+    "SECRET_KEY",
+    "local-development-key"
+)
+
+SITE_PASSWORD = os.environ.get("SITE_PASSWORD")
+
+def login_required(function):
+    @wraps(function)
+    def wrapper(*args, **kwargs):
+        if not session.get("logged_in"):
+            return redirect(url_for("login"))
+
+        return function(*args, **kwargs)
+
+    return wrapper
+
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    error = None
+
+    if request.method == "POST":
+        password = request.form.get("password", "")
+
+        if password == SITE_PASSWORD:
+            session["logged_in"] = True
+            return redirect(url_for("home"))
+
+        error = "Incorrect password."
+
+    return render_template(
+        "login.html",
+        error=error
+    )
+
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
+
 
 @app.route("/")
+@login_required
 def home():
     create_table()
 
@@ -20,7 +74,6 @@ def home():
 
     applications = get_applications()
 
-    # Search by company or position
     if search:
         applications = [
             application
@@ -29,7 +82,6 @@ def home():
             or search.lower() in application[2].lower()
         ]
 
-    # Filter by status
     if selected_status:
         applications = [
             application
@@ -37,7 +89,6 @@ def home():
             if application[4].lower() == selected_status.lower()
         ]
 
-    # Dashboard statistics
     total, status_counts = get_statistics()
 
     interviews = 0
@@ -69,6 +120,7 @@ def home():
 
 
 @app.route("/add", methods=["POST"])
+@login_required
 def add():
     company = request.form["company"].strip()
     position = request.form["position"].strip()
@@ -77,7 +129,6 @@ def add():
     salary = request.form["salary"].strip()
     notes = request.form["notes"].strip()
 
-    # Basic validation
     if not company or not position or not date_applied:
         return redirect(url_for("home"))
 
@@ -104,6 +155,7 @@ def add():
 
 
 @app.route("/update/<int:application_id>", methods=["POST"])
+@login_required
 def update(application_id):
     new_status = request.form["status"].strip()
 
@@ -124,6 +176,7 @@ def update(application_id):
 
 
 @app.route("/delete/<int:application_id>", methods=["POST"])
+@login_required
 def delete(application_id):
     delete_application(application_id)
 
